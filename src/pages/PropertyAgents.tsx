@@ -26,16 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { UserPlus, Trash, Loader2, Building, Mail, Search, X } from "lucide-react"
@@ -396,25 +387,14 @@ export function PropertyAgents() {
       </Dialog>
 
       {/* Delete Confirmation */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent className="backdrop-blur-md bg-background/80 border-primary/10 max-w-sm rounded-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl">Revoke Assignment?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will remove the link between this agent and the property. They will no longer be listed as a contact for this listing.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-lg h-11">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-lg h-11"
-            >
-              Confirm Removal
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+        title="Revoke Assignment?"
+        confirmText="Confirm Removal"
+        description="This will remove the link between this agent and the property. They will no longer be listed as a contact for this listing."
+      />
     </div>
   )
 }

@@ -18,10 +18,38 @@ import {
   MapPin,
   Clock,
   Briefcase,
-  ChevronRight
+  ChevronRight,
+  Cloud,
+  Sun,
+  CloudRain,
+  CloudSnow,
+  CloudLightning,
+  Wind
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import api from "@/lib/api"
+
+// Weather data interface
+interface WeatherData {
+  temp: number
+  condition: string
+  humidity: number
+  windSpeed: number
+  location: string
+  feelsLike: number
+}
+
+// Helper function to get weather icon based on condition
+const getWeatherIcon = (condition: string) => {
+  const lowerCondition = condition.toLowerCase()
+  if (lowerCondition.includes('sun') || lowerCondition.includes('clear')) return Sun
+  if (lowerCondition.includes('rain') || lowerCondition.includes('drizzle')) return CloudRain
+  if (lowerCondition.includes('snow') || lowerCondition.includes('sleet')) return CloudSnow
+  if (lowerCondition.includes('thunder') || lowerCondition.includes('lightning')) return CloudLightning
+  if (lowerCondition.includes('cloud') || lowerCondition.includes('overcast')) return Cloud
+  if (lowerCondition.includes('wind') || lowerCondition.includes('breeze')) return Wind
+  return Cloud
+}
 import { 
   AreaChart, 
   Area, 
@@ -49,6 +77,11 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'
 export function Dashboard() {
   const [stats, setStats] = useState(initialStats)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [currentTime, setCurrentTime] = useState(new Date())
+  const [weather, setWeather] = useState<WeatherData | null>(null)
+  const [weatherLoading, setWeatherLoading] = useState(true)
+  const [locationError, setLocationError] = useState<string | null>(null)
+  
   const { toast } = useToast()
   const navigate = useNavigate()
 
@@ -69,6 +102,64 @@ export function Dashboard() {
 
   useEffect(() => {
     fetchStats()
+    
+    // Update current time every second
+    const timer = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 1000)
+    
+    // Get location and weather
+    const getLocationAndWeather = () => {
+      if (!navigator.geolocation) {
+        setLocationError("Location not supported")
+        setWeatherLoading(false)
+        return
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords
+          try {
+            const geoResponse = await fetch(
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+            )
+            const geoData = await geoResponse.json()
+            const cityName = geoData.city || geoData.locality || geoData.principalSubdivision || "Unknown"
+            
+            const weatherResponse = await fetch(`https://wttr.in/${latitude},${longitude}?format=j1`)
+            const weatherData = await weatherResponse.json()
+            
+            if (weatherData.current_condition && weatherData.current_condition[0]) {
+              const current = weatherData.current_condition[0]
+              setWeather({
+                temp: Math.round(parseInt(current.temp_C)),
+                condition: current.weatherDesc[0].value,
+                humidity: parseInt(current.humidity),
+                windSpeed: Math.round(parseInt(current.windspeedKmph)),
+                location: cityName,
+                feelsLike: Math.round(parseInt(current.FeelsLikeC || current.temp_C))
+              })
+            } else {
+              setLocationError("Weather data unavailable")
+            }
+          } catch (error) {
+            console.error("Error fetching location/weather:", error)
+            setLocationError("Unable to fetch weather")
+          } finally {
+            setWeatherLoading(false)
+          }
+        },
+        (error) => {
+          console.error("Geolocation error:", error)
+          setLocationError("Location error")
+          setWeatherLoading(false)
+        }
+      )
+    }
+
+    getLocationAndWeather()
+    
+    return () => clearInterval(timer)
   }, [])
 
   const handleRefresh = () => {
@@ -89,7 +180,37 @@ export function Dashboard() {
               Live system overview and performance metrics.
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+             {/* Dynamic Weather & Time Segment */}
+             <div className="flex items-center gap-4 bg-background/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-primary/10 shadow-sm mr-2">
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">System Time</span>
+                  <span className="text-sm font-mono font-bold text-primary">
+                    {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+                  </span>
+                </div>
+                <div className="h-8 w-px bg-primary/10 mx-1" />
+                {weatherLoading ? (
+                  <div className="animate-pulse flex items-center gap-2">
+                    <div className="h-4 w-4 bg-muted rounded-full" />
+                    <div className="h-3 w-16 bg-muted rounded" />
+                  </div>
+                ) : weather ? (
+                   <div className="flex items-center gap-3">
+                      {(() => {
+                        const Icon = getWeatherIcon(weather.condition)
+                        return <Icon className="h-5 w-5 text-primary" />
+                      })()}
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold">{weather.temp}°C</span>
+                        <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">{weather.location}</span>
+                      </div>
+                   </div>
+                ) : (
+                  <div className="text-[10px] text-muted-foreground max-w-[100px] truncate">{locationError || "Weather Offline"}</div>
+                )}
+             </div>
+
              <div className="hidden md:flex flex-col items-end mr-4">
                 <span className="text-xs font-semibold text-muted-foreground uppercase">Revenue Tracking</span>
                 <span className="text-xl font-bold text-primary">${stats.revenue.total.toLocaleString()}</span>

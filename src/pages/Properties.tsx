@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog"
 import {
   Home,
@@ -37,7 +38,10 @@ import {
   User,
   Phone,
   Mail,
+  Loader2,
+  Tag
 } from "lucide-react"
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog"
 import {
   Pagination,
   PaginationContent,
@@ -57,6 +61,8 @@ import { useToast } from "@/hooks/use-toast"
 import { formatCurrency, cn, getInitials } from "@/lib/utils"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 export function Properties() {
   const [properties, setProperties] = useState<Property[]>([])
@@ -72,6 +78,17 @@ export function Properties() {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'property_title', direction: 'asc' })
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+
+  // Property Types Dialog state
+  const [isPropertyTypesOpen, setIsPropertyTypesOpen] = useState(false)
+  const [propertyTypes, setPropertyTypes] = useState<any[]>([])
+  const [isTypesLoading, setIsTypesLoading] = useState(false)
+  const [isTypeSubmitting, setIsTypeSubmitting] = useState(false)
+  const [selectedType, setSelectedType] = useState<any>(null)
+  const [typeName, setTypeName] = useState("")
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [deleteType, setDeleteType] = useState<"property" | "type">("property")
+
   const { toast } = useToast()
 
   const fetchProperties = async () => {
@@ -96,9 +113,109 @@ export function Properties() {
     }
   }
 
+  const fetchPropertyTypes = async () => {
+    try {
+      setIsTypesLoading(true)
+      const response = await api.get('/property-types')
+      if (response.data.success) {
+        setPropertyTypes(response.data.data)
+      }
+    } catch (error) {
+      console.error("Error fetching property types:", error)
+      toast({
+        title: "Error",
+        description: "Failed to fetch property types",
+        variant: "destructive"
+      })
+    } finally {
+      setIsTypesLoading(false)
+    }
+  }
+
   useEffect(() => {
     fetchProperties()
   }, [])
+
+  const handleOpenPropertyTypes = () => {
+    fetchPropertyTypes()
+    setIsPropertyTypesOpen(true)
+  }
+
+  const handleTypeSubmit = async () => {
+    if (!typeName.trim()) return
+
+    try {
+      setIsTypeSubmitting(true)
+      const payload = { pr_type_name: typeName }
+
+      if (selectedType) {
+        await api.put(`/property-types/${selectedType.pr_type_id}`, payload)
+        toast({
+          title: "Success",
+          description: "Property type updated successfully",
+        })
+      } else {
+        await api.post('/property-types', payload)
+        toast({
+          title: "Success",
+          description: "Property type created successfully",
+        })
+      }
+      setTypeName("")
+      setSelectedType(null)
+      fetchPropertyTypes()
+      // Also refresh properties to update the type dropdown
+      fetchProperties()
+    } catch (error) {
+      console.error("Error saving property type:", error)
+      toast({
+        title: "Error",
+        description: "Failed to save property type",
+        variant: "destructive"
+      })
+    } finally {
+      setIsTypeSubmitting(false)
+    }
+  }
+
+  const handleTypeDelete = (id: number, name: string) => {
+    setSelectedType({ pr_type_id: id, pr_type_name: name })
+    setDeleteType("type")
+    setIsDeleteDialogOpen(true)
+  }
+
+  const executeTypeDelete = async () => {
+    if (!selectedType) return
+
+    try {
+      await api.delete(`/property-types/${selectedType.pr_type_id}`)
+      toast({
+        title: "Success",
+        description: "Property type deleted successfully",
+      })
+      fetchPropertyTypes()
+      fetchProperties()
+      setIsDeleteDialogOpen(false)
+      setSelectedType(null)
+    } catch (error) {
+      console.error("Error deleting property type:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete property type. It might be in use by some properties.",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleEditType = (type: any) => {
+    setSelectedType(type)
+    setTypeName(type.pr_type_name)
+  }
+
+  const resetTypeForm = () => {
+    setSelectedType(null)
+    setTypeName("")
+  }
 
   // Pagination logic handling "all"
   const totalItems = filteredProperties.length
@@ -224,12 +341,20 @@ export function Properties() {
     }
   }
 
-  const handleDeleteProperty = async (property: Property) => {
-    if (!confirm(`Are you sure you want to delete "${property.property_title}"?`)) return
+  const handleDeleteProperty = (property: Property) => {
+    setSelectedProperty(property)
+    setDeleteType("property")
+    setIsDeleteDialogOpen(true)
+  }
+
+  const executePropertyDelete = async () => {
+    if (!selectedProperty) return
     try {
-      const response = await api.delete(`/properties/${property.pr_id}`)
+      const response = await api.delete(`/properties/${selectedProperty.pr_id}`)
       if (response.data.success) {
         toast({ title: "Success", description: "Property deleted successfully" })
+        setIsDeleteDialogOpen(false)
+        setSelectedProperty(null)
         fetchProperties()
       }
     } catch (error) {
@@ -266,6 +391,14 @@ export function Properties() {
             className="backdrop-blur-sm"
           >
             <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleOpenPropertyTypes}
+            className="gap-2"
+          >
+            <Tag className="h-4 w-4" />
+            Property Types
           </Button>
           <Button onClick={() => {
             setSelectedProperty(null)
@@ -324,9 +457,19 @@ export function Properties() {
       <Tabs defaultValue="table" value={viewMode} onValueChange={(v: any) => setViewMode(v)}>
         <div className="flex items-center justify-between">
           <PropertyFilters onFilterChange={handleFilterChange} />
-          <TabsList className="bg-muted/50 backdrop-blur-sm">
-            <TabsTrigger value="table"><Layout className="h-4 w-4" /></TabsTrigger>
-            <TabsTrigger value="grid"><Grid3x3 className="h-4 w-4" /></TabsTrigger>
+          <TabsList className="bg-muted/30 border border-border p-1">
+            <TabsTrigger
+              value="table"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
+            >
+              <Layout className="h-4 w-4" />
+            </TabsTrigger>
+            <TabsTrigger
+              value="grid"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
+            >
+              <Grid3x3 className="h-4 w-4" />
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -409,7 +552,7 @@ export function Properties() {
             <SelectTrigger className="h-8 w-[70px]">
               <SelectValue placeholder={itemsPerPage} />
             </SelectTrigger>
-            <SelectContent className="backdrop-blur-md bg-background/80" side="top">
+            <SelectContent className="bg-white dark:bg-gray-800" side="top">
               {[5, 10, 25, 50, 100].map((pageSize) => (
                 <SelectItem key={pageSize} value={pageSize.toString()}>
                   {pageSize}
@@ -454,6 +597,119 @@ export function Properties() {
         property={selectedProperty || undefined}
         onSubmit={selectedProperty ? handleUpdateProperty : handleCreateProperty}
       />
+
+      {/* Property Types Management Dialog */}
+      <Dialog open={isPropertyTypesOpen} onOpenChange={(open) => {
+        setIsPropertyTypesOpen(open)
+        if (!open) resetTypeForm()
+      }}>
+        <DialogContent className="sm:max-w-[600px] w-[95vw] max-h-[85vh] p-0 overflow-hidden">
+          <DialogHeader className="px-6 py-4 border-b bg-muted/30">
+            <DialogTitle className="text-xl font-semibold flex items-center gap-2">
+              <Tag className="h-5 w-5" />
+              Manage Property Types
+            </DialogTitle>
+            <DialogDescription>
+              Add, edit, or remove property categories for your listings.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-[min(60vh,500px)] overflow-y-auto p-6">
+            {/* Add/Edit Form */}
+            <div className="space-y-4 mb-6 p-4 border rounded-lg bg-muted/20">
+              <Label htmlFor="typeName" className="text-sm font-semibold">
+                {selectedType ? "Edit Property Type" : "Add New Property Type"}
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  id="typeName"
+                  placeholder="e.g., Apartment, Villa, Land"
+                  value={typeName}
+                  onChange={(e) => setTypeName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && typeName.trim()) {
+                      handleTypeSubmit()
+                    }
+                  }}
+                />
+                <Button
+                  onClick={handleTypeSubmit}
+                  disabled={isTypeSubmitting || !typeName.trim()}
+                >
+                  {isTypeSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  {selectedType ? "Update" : "Add"}
+                </Button>
+                {selectedType && (
+                  <Button
+                    variant="outline"
+                    onClick={resetTypeForm}
+                  >
+                    Cancel
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Types List */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-muted-foreground">All Property Types</h4>
+              {isTypesLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : propertyTypes.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground border rounded-lg">
+                  <Tag className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                  <p>No property types found</p>
+                  <p className="text-xs mt-1">Add your first property type above</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {propertyTypes.map((type) => (
+                    <div
+                      key={type.pr_type_id}
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/30 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Tag className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{type.pr_type_name}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
+                          onClick={() => handleEditType(type)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                          onClick={() => handleTypeDelete(type.pr_type_id, type.pr_type_name)}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="px-6 py-4 border-t bg-muted/10">
+            <Button variant="outline" onClick={() => setIsPropertyTypesOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* View Details Modal */}
       <Dialog open={isViewOpen} onOpenChange={(open) => { setIsViewOpen(open); if (!open) setActiveImageIndex(0); }}>
@@ -693,6 +949,30 @@ export function Properties() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Unified Delete Confirmation Dialog */}
+      <DeleteConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={deleteType === "property" ? executePropertyDelete : executeTypeDelete}
+        isLoading={isLoading}
+        title="Confirm Deletion"
+        description={
+          deleteType === "property" ? (
+            <>
+              Are you sure you want to delete <span className="font-bold text-foreground">"{selectedProperty?.property_title}"</span>?
+              <br /><br />
+              This listing and all associated historical data will be permanently removed.
+            </>
+          ) : (
+            <>
+              Are you sure you want to delete the category <span className="font-bold text-foreground">"{selectedType?.pr_type_name}"</span>?
+              <br /><br />
+              This action might affect properties currently assigned to this type.
+            </>
+          )
+        }
+      />
     </div>
   )
 }

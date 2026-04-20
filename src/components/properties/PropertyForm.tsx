@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
+import { RichTextEditor } from "@/components/ui/RichTextEditor"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { Card, CardContent } from "@/components/ui/card"
@@ -207,10 +208,15 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit }: Propert
       errors.price_guide = "Please enter a valid price"
     }
 
-    if (!formData.property_description.trim()) {
+    if (!formData.property_description || formData.property_description.trim() === "" || formData.property_description === "<p></p>" || formData.property_description === "<p><br></p>") {
       errors.property_description = "Description is required"
-    } else if (formData.property_description.length < 20) {
-      errors.property_description = "Description must be at least 20 characters"
+    } else {
+      // Strip HTML to check real text length
+      const doc = new DOMParser().parseFromString(formData.property_description, 'text/html')
+      const plainText = doc.body.textContent || ""
+      if (plainText.length < 20) {
+        errors.property_description = "Description must be at least 20 characters"
+      }
     }
 
     setValidationErrors(errors)
@@ -394,20 +400,32 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit }: Propert
           {/* Tabs */}
           <div className="px-6 pt-4 border-b flex-shrink-0">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-4 bg-muted/50 h-12">
-                <TabsTrigger value="basic" className="flex items-center gap-2">
+              <TabsList className="grid w-full grid-cols-4 mb-6 p-1 bg-muted/30 border border-border/50 rounded-xl h-12">
+                <TabsTrigger 
+                  value="basic" 
+                  className="gap-2 rounded-lg transition-all duration-300 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-[0_0_20px_-5px_rgba(var(--primary),0.4)] dark:data-[state=active]:shadow-[0_0_20px_-5px_rgba(59,130,246,0.5)]"
+                >
                   <Info className="h-4 w-4" />
                   <span className="hidden sm:inline">Basic Info</span>
                 </TabsTrigger>
-                <TabsTrigger value="pricing" className="flex items-center gap-2">
+                <TabsTrigger 
+                  value="pricing" 
+                  className="gap-2 rounded-lg transition-all duration-300 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-[0_0_20px_-5px_rgba(var(--primary),0.4)] dark:data-[state=active]:shadow-[0_0_20px_-5px_rgba(59,130,246,0.5)]"
+                >
                   <DollarSign className="h-4 w-4" />
                   <span className="hidden sm:inline">Pricing</span>
                 </TabsTrigger>
-                <TabsTrigger value="specs" className="flex items-center gap-2">
+                <TabsTrigger 
+                  value="specs" 
+                  className="gap-2 rounded-lg transition-all duration-300 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-[0_0_20px_-5px_rgba(var(--primary),0.4)] dark:data-[state=active]:shadow-[0_0_20px_-5px_rgba(59,130,246,0.5)]"
+                >
                   <Building2 className="h-4 w-4" />
                   <span className="hidden sm:inline">Specifications</span>
                 </TabsTrigger>
-                <TabsTrigger value="assets" className="flex items-center gap-2">
+                <TabsTrigger 
+                  value="assets" 
+                  className="gap-2 rounded-lg transition-all duration-300 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-[0_0_20px_-5px_rgba(var(--primary),0.4)] dark:data-[state=active]:shadow-[0_0_20px_-5px_rgba(59,130,246,0.5)]"
+                >
                   <Grid3X3 className="h-4 w-4" />
                   <span className="hidden sm:inline">Media</span>
                 </TabsTrigger>
@@ -462,7 +480,7 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit }: Propert
                           <SelectTrigger className={validationErrors.pr_type_id ? "border-destructive" : ""}>
                             <SelectValue placeholder="Select property type" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="backdrop-blur-xl bg-background/95 border-primary/10 font-outfit">
                             {propertyTypes.map((t) => (
                               <SelectItem key={t.pr_type_id} value={t.pr_type_id.toString()}>
                                 {t.pr_type_name}
@@ -488,7 +506,7 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit }: Propert
                           <SelectTrigger>
                             <SelectValue placeholder="Select reason" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="backdrop-blur-xl bg-background/95 border-primary/10 font-outfit">
                             <SelectItem value="Sale">For Sale</SelectItem>
                             <SelectItem value="Rent">For Rent</SelectItem>
                             <SelectItem value="Lease">For Lease</SelectItem>
@@ -501,17 +519,17 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit }: Propert
                       <Label htmlFor="desc" className="text-sm font-semibold">
                         Description <span className="text-destructive">*</span>
                       </Label>
-                      <Textarea
-                        id="desc"
+                      <RichTextEditor
                         value={formData.property_description}
-                        onChange={(e) => {
-                          setFormData({ ...formData, property_description: e.target.value })
+                        onChange={(val) => {
+                          setFormData({ ...formData, property_description: val })
                           if (validationErrors.property_description) {
                             setValidationErrors({ ...validationErrors, property_description: "" })
                           }
                         }}
                         placeholder="Describe the property in detail - location, features, amenities, etc."
-                        className={`min-h-[120px] ${validationErrors.property_description ? "border-destructive" : ""}`}
+                        className={validationErrors.property_description ? "border-destructive" : ""}
+                        minHeight="200px"
                       />
                       {validationErrors.property_description && (
                         <p className="text-xs text-destructive flex items-center gap-1">
@@ -519,7 +537,10 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit }: Propert
                         </p>
                       )}
                       <p className="text-xs text-muted-foreground">
-                        {formData.property_description.length} characters (minimum 20)
+                        {(() => {
+                          const doc = new DOMParser().parseFromString(formData.property_description, 'text/html')
+                          return (doc.body.textContent || "").length
+                        })()} characters (minimum 20)
                       </p>
                     </div>
                   </CardContent>
@@ -590,7 +611,7 @@ export function PropertyForm({ open, onOpenChange, property, onSubmit }: Propert
                           <SelectTrigger>
                             <SelectValue placeholder="Select status" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="backdrop-blur-xl bg-background/95 border-primary/10 font-outfit">
                             <SelectItem value="Available">
                               <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 rounded-full bg-green-500" />

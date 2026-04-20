@@ -1,10 +1,11 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import api from "@/lib/api"
+import logo from "@/assets/logo.png"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Tooltip,
@@ -13,20 +14,16 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import {
+  AlertCircle,
+  Loader2,
   Eye,
   EyeOff,
   Mail,
   Lock,
   LogIn,
-  Shield,
-  Github,
-  Twitter,
-  ArrowRight,
-  AlertCircle,
-  Loader2
+  Shield
 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
 import {
   Dialog,
@@ -64,6 +61,15 @@ export function Login() {
   const navigate = useNavigate()
   const { toast } = useToast()
 
+  // Remember Me: Load saved email on mount
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('remembered_email')
+    if (savedEmail) {
+      setEmail(savedEmail)
+      setRememberMe(true)
+    }
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
@@ -76,6 +82,14 @@ export function Login() {
       if (response.data.success && response.data.data) {
         localStorage.setItem('auth_token', response.data.data.access_token);
         localStorage.setItem('auth_user', JSON.stringify(response.data.data));
+        
+        // Handle Remember Me
+        if (rememberMe) {
+          localStorage.setItem('remembered_email', email);
+        } else {
+          localStorage.removeItem('remembered_email');
+        }
+        
         console.log("Authentication successful, token stored.");
       }
 
@@ -93,16 +107,6 @@ export function Login() {
     }
   }
 
-  const handleSocialLogin = (provider: string) => {
-    setIsLoading(true)
-    toast({
-      title: `Login with ${provider}`,
-      description: `Redirecting to ${provider}...`,
-    })
-    setTimeout(() => {
-      setIsLoading(false)
-    }, 1500)
-  }
 
   const handleSendOTP = async () => {
     if (!forgotEmail) {
@@ -237,8 +241,8 @@ export function Login() {
         <Card className="w-full max-w-md relative bg-background/80 backdrop-blur-xl border-primary/20 shadow-2xl">
           <CardHeader className="space-y-2 text-center">
             <div className="flex justify-center mb-4">
-              <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-bold text-3xl shadow-lg">
-                RE
+              <div className="h-28 w-28 flex items-center justify-center bg-slate-900 rounded-2xl p-4 shadow-2xl border border-white/10 ring-4 ring-primary/10">
+                <img src={logo} alt="ADADA RE" className="h-full w-full object-contain" />
               </div>
             </div>
             <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">

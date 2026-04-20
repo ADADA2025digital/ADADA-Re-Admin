@@ -55,7 +55,8 @@ export function Profile() {
     location: "",
     bio: "",
     role: "",
-    joinDate: new Date().toISOString()
+    joinDate: new Date().toISOString(),
+    image: null
   })
   
   const [formData, setFormData] = useState({
@@ -178,7 +179,6 @@ export function Profile() {
       if (response.data.success) {
         setProfileData({ ...profileData, image: response.data.data.user_pic })
         toast({ title: "Profile picture updated" })
-        // Optional: reload window or refetch to see changes
       }
     } catch (error) {
       console.error("Upload failed", error)
@@ -496,3 +496,6 @@ export function Profile() {
     </div>
   )
 }
+
+// Ensure the export is present
+export default Profile

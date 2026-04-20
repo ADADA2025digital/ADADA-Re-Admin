@@ -10,16 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import type { AgentMessage } from "@/lib/data"
+// Removed AlertDialog
 import {
   Dialog,
   DialogContent,
@@ -45,13 +37,28 @@ import {
 import { cn } from "@/lib/utils"
 import { Separator } from "@/components/ui/separator"
 
+// Helper to format asset URLs
+function getAssetUrl(url: string | undefined) {
+  if (!url) return undefined;
+  if (url.startsWith('http')) return url;
+  // Ensure we use the correct storage path for relative URLs
+  const cleanPath = url.replace(/^\//, '');
+  if (cleanPath.startsWith('storage/')) {
+    return `https://urbanviewre.com/adada-re-backend/api/${cleanPath}`;
+  }
+  if (cleanPath.startsWith('adada-re-backend/api/storage/')) {
+    return `https://urbanviewre.com/${cleanPath}`;
+  }
+  return `https://urbanviewre.com/adada-re-backend/api/storage/${cleanPath}`;
+}
+
 export function AgentMessages() {
-  const [messages, setMessages] = useState<any[]>([])
+  const [messages, setMessages] = useState<AgentMessage[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isReadDialogOpen, setIsReadDialogOpen] = useState(false)
   const [idToMark, setIdToMark] = useState<number | null>(null)
   const [viewDialogOpen, setViewDialogOpen] = useState(false)
-  const [selectedMessage, setSelectedMessage] = useState<any>(null)
+  const [selectedMessage, setSelectedMessage] = useState<AgentMessage | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState<number | "all">(10)
@@ -278,7 +285,7 @@ export function AgentMessages() {
                           <div className="flex items-center gap-3">
                             <Avatar className="h-10 w-10 rounded-md">
                               {msg.property.assets?.find((a: any) => a.asset_type === 'img') ? (
-                                <AvatarImage src={msg.property.assets.find((a: any) => a.asset_type === 'img').asset_value} alt={msg.property.property_title} className="object-cover" />
+                                <AvatarImage src={getAssetUrl(msg.property.assets.find((a: any) => a.asset_type === 'img').asset_value)} alt={msg.property.property_title} className="object-cover" />
                               ) : (
                                 <AvatarFallback className="rounded-md bg-primary/10 text-primary">
                                   <Home className="h-5 w-5" />
@@ -429,25 +436,25 @@ export function AgentMessages() {
         )}
       </Card>
 
-      <AlertDialog open={isReadDialogOpen} onOpenChange={setIsReadDialogOpen}>
-        <AlertDialogContent className="bg-background border border-border rounded-xl shadow-lg">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Mark as Read?</AlertDialogTitle>
-            <AlertDialogDescription>
+      <Dialog open={isReadDialogOpen} onOpenChange={setIsReadDialogOpen}>
+        <DialogContent className="bg-background border border-border rounded-xl shadow-lg sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Mark as Read?</DialogTitle>
+            <DialogDescription>
               This will mark the selected message as read and remove its standard highlight.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsReadDialogOpen(false)} className="rounded-xl">Cancel</Button>
+            <Button 
               onClick={handleMarkAsRead}
               className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl"
             >
               Mark Read
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         {selectedMessage && (
@@ -468,7 +475,7 @@ export function AgentMessages() {
                   <div className="flex items-center gap-4 bg-primary/5 p-4 rounded-xl border border-primary/10 shadow-sm">
                     <Avatar className="h-16 w-16 rounded-lg pointer-events-none">
                       {selectedMessage.property.assets?.find((a: any) => a.asset_type === 'img') ? (
-                        <AvatarImage src={selectedMessage.property.assets.find((a: any) => a.asset_type === 'img').asset_value} alt={selectedMessage.property.property_title} className="object-cover" />
+                        <AvatarImage src={getAssetUrl(selectedMessage.property.assets.find((a: any) => a.asset_type === 'img').asset_value)} alt={selectedMessage.property.property_title} className="object-cover" />
                       ) : (
                         <AvatarFallback className="rounded-lg bg-primary/10 text-primary">
                           <Home className="h-8 w-8" />

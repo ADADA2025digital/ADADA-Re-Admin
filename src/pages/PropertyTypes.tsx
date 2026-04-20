@@ -22,6 +22,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { Plus, Edit, Trash, Loader2, Home } from "lucide-react"
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog"
 
 export function PropertyTypes() {
   const [types, setTypes] = useState<any[]>([])
@@ -29,6 +30,7 @@ export function PropertyTypes() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedType, setSelectedType] = useState<any>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [typeName, setTypeName] = useState("")
   const { toast } = useToast()
 
@@ -100,15 +102,23 @@ export function PropertyTypes() {
     }
   }
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this property type?")) return
+  const handleDeleteRequest = (type: any) => {
+    setSelectedType(type)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleDelete = async () => {
+    if (!selectedType) return
 
     try {
-      await api.delete(`/property-types/${id}`)
+      setIsSubmitting(true)
+      await api.delete(`/property-types/${selectedType.pr_type_id}`)
       toast({
         title: "Success",
         description: "Property type deleted successfully",
       })
+      setIsDeleteDialogOpen(false)
+      setSelectedType(null)
       fetchTypes()
     } catch (error) {
       console.error("Error deleting property type:", error)
@@ -117,6 +127,8 @@ export function PropertyTypes() {
         description: "Failed to delete property type. It might be in use.",
         variant: "destructive"
       })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -172,7 +184,7 @@ export function PropertyTypes() {
                         <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(type)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(type.pr_type_id)}>
+                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteRequest(type)}>
                           <Trash className="h-4 w-4" />
                         </Button>
                       </TableCell>
@@ -213,6 +225,21 @@ export function PropertyTypes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DeleteConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+        isLoading={isSubmitting}
+        title="Confirm Deletion"
+        description={
+          <>
+            Are you sure you want to delete <span className="font-bold text-foreground">"{selectedType?.pr_type_name}"</span>? 
+            <br /><br />
+            This category and all its associations will be permanently removed.
+          </>
+        }
+      />
     </div>
   )
 }

@@ -58,6 +58,18 @@ export interface Property {
   created_at?: string;
 }
 
+export interface AgentMessage {
+  c_m__id: number;
+  pr_id: number;
+  guest_full_name: string;
+  guest_email: string;
+  guest_ph_number: string;
+  guest_query: string;
+  is_read: number;
+  send_date: string;
+  property?: Property;
+}
+
 export interface Customer {
   id: string
   name: string

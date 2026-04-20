@@ -15,10 +15,8 @@ import {
   Search,
   Moon,
   Sun,
-  Settings,
   LogOut,
   User,
-  HelpCircle,
   Maximize,
   Minimize,
   Menu,
@@ -404,18 +402,6 @@ export function Header() {
               <Link to="/profile" className="flex items-center px-3 py-2 w-full">
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild className="cursor-pointer transition-colors hover:bg-muted/50 focus:bg-muted/50">
-              <Link to="/settings" className="flex items-center px-3 py-2 w-full">
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild className="cursor-pointer transition-colors hover:bg-muted/50 focus:bg-muted/50">
-              <Link to="/support" className="flex items-center px-3 py-2 w-full">
-                <HelpCircle className="mr-2 h-4 w-4" />
-                <span>Help</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-border/50" />

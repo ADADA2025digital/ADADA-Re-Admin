@@ -40,16 +40,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { X } from "lucide-react"
 
@@ -70,6 +61,8 @@ export function Roles() {
   const [members, setMembers] = useState<any[]>([])
   const [availableUsers, setAvailableUsers] = useState<any[]>([])
   const [selectedUserId, setSelectedUserId] = useState("")
+  const [memberToRemove, setMemberToRemove] = useState<any>(null)
+  const [isRemoveMemberOpen, setIsRemoveMemberOpen] = useState(false)
 
   const [newRoleName, setNewRoleName] = useState("")
   const [newRoleDesc, setNewRoleDesc] = useState("")
@@ -446,23 +439,9 @@ export function Roles() {
                       variant="ghost"
                       size="icon"
                       className="text-muted-foreground hover:text-red-600 hover:bg-red-50"
-                      onClick={async () => {
-                        try {
-                          const response = await api.delete('/roles/remove', {
-                            data: { user_id: user.user_id, role_id: selectedRole.id }
-                          });
-                          if (response.data.success) {
-                            toast({ title: "Member removed from role" });
-                            fetchMembers(selectedRole.id);
-                            fetchRoles();
-                          }
-                        } catch (err) {
-                          console.error("Failed to remove member", err);
-                          toast({
-                            title: "Failed to remove member",
-                            variant: "destructive"
-                          });
-                        }
+                      onClick={() => {
+                        setMemberToRemove(user)
+                        setIsRemoveMemberOpen(true)
                       }}
                     >
                       <X className="h-4 w-4" />
@@ -534,26 +513,52 @@ export function Roles() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Role AlertDialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent className="backdrop-blur-md bg-background/80 border-red-200">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to delete this role?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the <strong>{selectedRole?.name}</strong> role and remove it from all assigned users. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setSelectedRole(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteRole}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Delete Role
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Remove Member Confirmation */}
+      <DeleteConfirmDialog
+        isOpen={isRemoveMemberOpen}
+        onClose={() => setIsRemoveMemberOpen(false)}
+        onConfirm={async () => {
+          try {
+            const response = await api.delete('/roles/remove', {
+              data: { user_id: memberToRemove.user_id, role_id: selectedRole.id }
+            });
+            if (response.data.success) {
+              toast({ title: "Member removed from role" });
+              setIsRemoveMemberOpen(false)
+              setMemberToRemove(null)
+              fetchMembers(selectedRole.id);
+              fetchRoles();
+            }
+          } catch (err) {
+            console.error("Failed to remove member", err);
+            toast({
+              title: "Failed to remove member",
+              variant: "destructive"
+            });
+          }
+        }}
+        title="Revoke Access?"
+        confirmText="Confirm Removal"
+        description={
+          <>
+            Are you sure you want to remove <strong>{memberToRemove?.details ? `${memberToRemove.details.user_firstname} ${memberToRemove.details.user_lastname}` : memberToRemove?.user_email}</strong> from the <strong>{selectedRole?.name}</strong> role?
+          </>
+        }
+      />
+
+      {/* Remove Member Confirmation */}
+      <DeleteConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleDeleteRole}
+        title="Delete Role"
+        confirmText="Delete Role"
+        description={
+          <>
+            This will permanently delete the <strong>{selectedRole?.name}</strong> role and remove it from all assigned users. This action cannot be undone.
+          </>
+        }
+      />
     </div>
   )
 }

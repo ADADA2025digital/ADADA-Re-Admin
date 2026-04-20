@@ -10,16 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog"
 import { useToast } from "@/hooks/use-toast"
 import { Trash, Loader2, Mail, User, MessageSquare, Clock, Search, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -198,25 +189,13 @@ export function Contacts() {
         </CardContent>
       </Card>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent className="backdrop-blur-md bg-background/80 border-primary/10 rounded-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Inquiry?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This message will be permanently removed from the vault.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
-            >
-              Delete Permanently
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+        title="Delete Inquiry?"
+        description="This message will be permanently removed from the vault."
+      />
     </div>
   )
 }

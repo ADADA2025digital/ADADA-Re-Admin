@@ -23,6 +23,8 @@ import { AgentMessages } from "@/pages/AgentMessages"
 import { NotFound } from "@/pages/NotFound"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { Toaster } from "@/components/ui/sonner"
+import { Configuration } from "@/pages/Configuration"
+import { Articles } from "@/pages/Articles"
 
 function App() {
   useEffect(() => {
@@ -62,7 +64,9 @@ function App() {
                 <Route path="/property-agents" element={<PropertyAgents />} />
                 <Route path="/contacts" element={<Contacts />} />
                 <Route path="/agent-messages" element={<AgentMessages />} />
-                
+                <Route path="/configuration" element={<Configuration />} />
+                <Route path="/articles" element={<Articles />} />
+
                 {/* 404 Route for unmatched paths inside dashboard */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
